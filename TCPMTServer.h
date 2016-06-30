@@ -92,7 +92,7 @@ class TCPMTServer {
         static TCPMTServer* _serverInstance; ///< server's singleton instance.
         TCPMTServer() {}; ///< private constructor since this is a singleton class.
         sockaddr_in6 _serverSocket; ///< strucutre which holds server socket data.
-        int _serverSocketId; ///< ID of the socket used to communicate with the client.       
+        int _serverSocketId; ///< ID of the socket used to communicate with the client.      
 
 };
 

@@ -51,22 +51,18 @@ void TCPMTServer::closeConnection(int clientId) {
     sendMessageToClient(clientId,"-1");
 
     if (LOGGING) {
-        cout << "Client is out" << endl;
+        cout << "Client  " <<  clientId << " is out" << endl;
     }
 }
 
 
 string TCPMTServer::getMessageFromClient(int clientId) {
-    if (LOGGING) {
-        cout << "Waiting for client message" << endl;
-    }
-
     char msg[MAX_BUF];
 
     recv(clientId,msg,MAX_BUF, 0);
 
     if (LOGGING) {
-        cout << "Got client message: " << msg << endl;
+        cout << "Got message from client " << clientId << " : " << msg << endl;
     }
    
     return string(msg);
@@ -76,7 +72,7 @@ string TCPMTServer::getMessageFromClient(int clientId) {
 
 void TCPMTServer::sendMessageToClient(int clientId, const string& message) {
     if (LOGGING) {
-        cout << "Sending message to client: " << message << "." << endl;
+        cout << "Sending message to client "  << clientId << " : " << message << "." << endl;
     }
 
    if (send(clientId, message.c_str(), message.size()+1, 0) < 0) {

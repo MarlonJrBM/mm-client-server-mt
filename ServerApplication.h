@@ -1,6 +1,8 @@
 #ifndef SERVER_APPLICATION_H
 #define SERVER_APPLICATION_H
 
+#include <pthread.h>
+#include <vector>
 #include "Ranking.h"
 
 namespace TP3 {
@@ -22,14 +24,24 @@ public:
 	*/
     int runApplication(int argc, char** argv);
 
+    /*
+    * Function which will process a new client function.
+    * A new thread should be opened each time the function is called.
+    * @param clientId
+    */
+    static void* processClient(void* clientData);
+
     /**
     * Cleans up server singleton.
     */
     ~ServerApplication();
 
 protected:
-    Ranking* _timeRanking = NULL; ///< keeps storage of times sent by client (athletes).
-
+    static Ranking* _timeRanking; ///< keeps storage of times sent by client (athletes).
+    std::vector<pthread_t> _tidList;
+    std::vector<unsigned> _clientList;
+    static pthread_mutex_t _lock;
+    unsigned _numClients; ///< number of currently connected clients. 
 
     /**
     * Checks whether message is a closing signal.
@@ -37,7 +49,7 @@ protected:
     * @param message client message.
     * @return true if it's closing signal.
     */
-    bool isClosingSignal(const std::string& message);
+    static bool isClosingSignal(const std::string& message);
 
     /**
     * Checks whether message is a valid one.
@@ -45,7 +57,7 @@ protected:
     * @param message client message.
     * @return true if it's valid message
     */
-    bool isValidMessage(const std::string& message);
+    static bool isValidMessage(const std::string& message);
 	
 };
 

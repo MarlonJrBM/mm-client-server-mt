@@ -21,7 +21,7 @@ OBJ_DIR = OBJ
 INCLUDES = -I. 
 
 #Shared libraries to be included in compilation, must preprend with -l.
-LIBS =
+LIBS = -lpthread
 
 #Folder where to find shared libraries, must prepend with -L.
 LDFLAGS =

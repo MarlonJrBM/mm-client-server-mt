@@ -11,15 +11,24 @@ using namespace TP3;
 
 
 TCPMTServer* TCPMTServer::_serverInstance = NULL;
+Ranking* ServerApplication::_timeRanking = NULL;
+pthread_mutex_t ServerApplication::_lock;
 
 int ServerApplication::runApplication(int argc, char** argv) {
 
     //Local and helper variables
     int curClient = -1;
-    string clientMessage = "";
-    string position = "";
     string port = argv[1];
-    bool isClosingMessage = false;
+    pthread_t tid;
+    _numClients = 0;
+
+    //pthread-related stuff initialization
+    if (pthread_mutex_init(&_lock, NULL) != 0) {
+        printf("\n mutex init failed\n");
+        return 1;
+    }
+
+
     
     if (LOGGING) {
         cout << "Starting server!" << endl;
@@ -38,36 +47,17 @@ int ServerApplication::runApplication(int argc, char** argv) {
     //Server's main loop
     while (true) {
         //Below calls are blocking, will wait until
-        //Client connects and send their time in the race
-        curClient = server->acceptClient(); 
+        //Client connects and opens new thread
+        curClient = server->acceptClient();
+        _numClients++;
+        _clientList.push_back(curClient); 
+        _tidList.push_back(tid);
 
-        do {
-            clientMessage = server->getMessageFromClient(curClient);
-            isClosingMessage = isClosingSignal(clientMessage);
-
-            if (isClosingMessage) {
-                _timeRanking->clear();
-                server->closeConnection(curClient);
-                continue;
-            }
-
-            //First, we'll check if client sends a valid message
-            //This is just a basic server-side input validation
-            if (!isValidMessage(clientMessage)) {
-                server->sendMessageToClient(curClient,"0");
-                isClosingMessage = false; //We'll keep taking requests from user
-                continue;
-            }
-
-            //Will handle user request, sending his/her
-            //position back
-            position = _timeRanking->insert(clientMessage);
-            cout << position << endl;
-            server->sendMessageToClient(curClient,position);
-
-
-        } while (!isClosingMessage);
-
+        //creating new thread
+        if (pthread_create(&(_tidList[_numClients - 1]), NULL, processClient, (void*)&_clientList[_numClients-1]) != 0) {
+            cout << "Error when accepting client with id " << curClient << endl;
+            exit(1);
+        }
     }
 
     //Will never reach below lines in single-threaded version
@@ -94,5 +84,49 @@ bool ServerApplication::isValidMessage(const string& message) {
 ServerApplication::~ServerApplication() {
     TCPMTServer::deleteInstance();
     if (!_timeRanking) delete(_timeRanking);
+    pthread_mutex_destroy(&_lock);
 }
 
+void* ServerApplication::processClient(void* clientData) {
+
+    bool isClosingMessage = false;
+    TCPMTServer* server = TCPMTServer::getInstance();
+    unsigned curClient = *((unsigned*) clientData);
+    string clientMessage = "";
+    string position = "";
+
+    if (LOGGING) {
+        cout << "Opening new connection to client " << curClient << endl;
+    }
+
+    do {
+        clientMessage = server->getMessageFromClient(curClient);
+        isClosingMessage = isClosingSignal(clientMessage);
+
+        if (isClosingMessage) {
+            server->closeConnection(curClient);
+            continue;
+        }
+
+        //First, we'll check if client sends a valid message
+        //This is just a basic server-side input validation
+        if (!isValidMessage(clientMessage)) {
+            server->sendMessageToClient(curClient,"0");
+            isClosingMessage = false; //We'll keep taking requests from user
+            continue;
+        }
+
+        //Will handle user request, sending his/her
+        //position back
+        pthread_mutex_lock(&_lock);
+        position = _timeRanking->insert(clientMessage);
+        cout << position << endl;
+        pthread_mutex_unlock(&_lock);
+        server->sendMessageToClient(curClient,position);
+
+
+        } while (!isClosingMessage);
+
+    return NULL;
+
+}
